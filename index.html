@@ -3,130 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الكينج محمد علي | أقوى منصة تاريخ وجغرافيا للثانوية العامة</title>
-    <meta name="description" content="منصة الكينج محمد علي التعليمية - خبير المواد الأدبية. شرح أسطوري لمنهج التاريخ والجغرافيا، خرائط ذهنية، ونظام امتحانات إلكترونية يحاكي نظام التابلت الجديد.">
-    <meta name="keywords" content="الكينج محمد علي, محمد علي تاريخ, الكينج جغرافيا, ثانوية عامة أدبي, منصة الكينج التعليمية, شرح تاريخ وجغرافيا">
-    <link rel="canonical" href="https://abdelrahmannkishk.github.io/DR/" />
-    <meta name="robots" content="index, follow">
+    <title>الكينج محمد علي | منصة التاريخ والجغرافيا</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
         :root { --gold: #fbbf24; --bg-dark: #020617; --panel: rgba(15, 23, 42, 0.9); }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-        body { background: var(--bg-dark); color: #f1f5f9; min-height: 100vh; overflow-x: hidden; }
-        
+        body { background: var(--bg-dark); color: #f1f5f9; min-height: 100vh; }
         .glass { background: var(--panel); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 30px; }
-        .gold-gradient { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #000 !important; font-weight: 800; transition: 0.4s; }
-        .gold-gradient:hover { transform: scale(1.02); box-shadow: 0 0 30px rgba(251, 191, 36, 0.4); }
-        
-        .page { display: none; animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
-        .page.active { display: block; }
+        .gold-gradient { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #000 !important; font-weight: 800; }
+        .page { display: none; }
+        .page.active { display: block; animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
         @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-
-        .edit-input { background: #0f172a; border: 2px solid #1e293b; padding: 14px; border-radius: 15px; width: 100%; color: white; margin-bottom: 12px; outline: none; transition: 0.3s; }
-        .edit-input:focus { border-color: #fbbf24; background: #1e293b; }
-        
+        .edit-input { background: #0f172a; border: 2px solid #1e293b; padding: 14px; border-radius: 15px; width: 100%; color: white; margin-bottom: 12px; outline: none; }
+        .edit-input:focus { border-color: #fbbf24; }
         .badge-free { background: #22c55e; color: white; padding: 2px 10px; border-radius: 8px; font-size: 10px; }
         .badge-paid { background: #ef4444; color: white; padding: 2px 10px; border-radius: 8px; font-size: 10px; }
-
-        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 2px solid rgba(251, 191, 36, 0.2); }
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 20px; }
         .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-
         @media print {
             body * { visibility: hidden; }
             #printContainer, #printContainer * { visibility: visible; }
             #printContainer { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
-            .ticket { border: 2px dashed #000; padding: 25px; margin: 15px; width: 28%; display: inline-block; text-align: center; color: black; border-radius: 20px; }
+            .ticket { border: 2px dashed #000; padding: 20px; margin: 10px; width: 30%; display: inline-block; text-align: center; color: black; }
         }
     </style>
 </head>
 <body>
 
-    <div id="toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-[10000] hidden bg-yellow-500 text-black px-10 py-4 rounded-2xl font-black shadow-2xl border-2 border-black"></div>
+    <div id="toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-[10000] hidden bg-yellow-500 text-black px-10 py-4 rounded-2xl font-black shadow-2xl"></div>
 
     <div id="loginPage" class="page active">
-        <div class="min-h-screen flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
-            <div class="w-full max-w-md glass p-10 text-center shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-                <img src="https://cdn-icons-png.flaticon.com/512/3426/3426653.png" class="w-24 mx-auto mb-6">
-                <h1 class="text-5xl font-black text-yellow-500 mb-2 italic tracking-tighter">د/ محمد علي</h1>
-                <p class="text-gray-400 mb-10 font-bold tracking-widest uppercase text-xs">كينج التاريخ و الجغرافيا</p>
-                <input type="text" id="authCode" placeholder="أدخل كود المرور" class="edit-input text-center text-2xl tracking-[5px] font-black border-yellow-500/20">
-                <button onclick="handleLogin()" class="gold-gradient w-full py-5 rounded-2xl text-xl mb-6 shadow-xl">دخول الطلاب</button>
-                <div class="flex gap-4">
-                    <button onclick="guestLogin()" class="flex-1 bg-white/5 py-4 rounded-2xl text-xs font-bold border border-white/10 hover:bg-white/10">🎁 محتوى مجاني</button>
-                </div>
+        <div class="min-h-screen flex items-center justify-center p-6">
+            <div class="w-full max-w-md glass p-10 text-center">
+                <h1 class="text-5xl font-black text-yellow-500 mb-2 italic">د/ محمد علي</h1>
+                <input type="text" id="authCode" placeholder="أدخل كود المرور" class="edit-input text-center text-2xl tracking-[5px] mt-6">
+                <button onclick="handleLogin()" class="gold-gradient w-full py-5 rounded-2xl text-xl mt-4">دخول</button>
             </div>
         </div>
     </div>
 
     <div id="adminPage" class="page p-6 no-print">
         <div class="max-w-7xl mx-auto">
-            <nav class="flex flex-wrap justify-between items-center mb-8 glass p-6 gap-6">
+            <nav class="flex flex-wrap justify-between items-center mb-8 glass p-6 gap-4">
                 <h2 class="text-lg font-black text-yellow-500">لوحة تحكم الكينج</h2>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="switchTab('content')" class="bg-slate-800 px-4 py-2 rounded-xl text-xs font-bold">إدارة المحتوى</button>
-                    <button onclick="switchTab('bank')" class="bg-slate-800 px-4 py-2 rounded-xl text-xs font-bold">بنك الأسئلة</button>
+                <div class="flex gap-2">
+                    <button onclick="switchTab('content')" class="bg-slate-800 px-4 py-2 rounded-xl text-xs font-bold">المحتوى</button>
+                    <button onclick="switchTab('bank')" class="bg-slate-800 px-4 py-2 rounded-xl text-xs font-bold">الأسئلة</button>
                     <button onclick="switchTab('students')" class="bg-slate-800 px-4 py-2 rounded-xl text-xs font-bold">الطلاب</button>
-                    <button onclick="logout()" class="bg-red-600 px-4 py-2 rounded-xl text-xs font-bold">خروج</button>
+                    <button onclick="logout()" class="bg-red-600 px-4 py-2 rounded-xl text-xs font-bold text-white">خروج</button>
                 </div>
             </nav>
 
             <div id="tab-content" class="admin-tab grid md:grid-cols-2 gap-8">
                 <div class="glass p-8">
-                    <h3 class="font-black mb-6 text-yellow-500">إضافة/تعديل كورس</h3>
+                    <h3 id="courseFormTitle" class="font-black mb-6 text-yellow-500">إضافة كورس</h3>
                     <input type="text" id="cName" placeholder="اسم الكورس" class="edit-input">
                     <select id="cYearSelect" class="edit-input">
-                        <option value="1">الصف الأول الثانوي</option>
-                        <option value="2">الصف الثاني الثانوي</option>
-                        <option value="3">الصف الثالث الثانوي</option>
+                        <option value="1">الأول الثانوي</option>
+                        <option value="2">الثاني الثانوي</option>
+                        <option value="3">الثالث الثانوي</option>
                     </select>
-                    <button onclick="addCourse()" class="gold-gradient w-full py-4 rounded-xl font-black">حفظ الكورس</button>
+                    <button id="saveCourseBtn" onclick="addCourse()" class="gold-gradient w-full py-4 rounded-xl font-black">حفظ</button>
                     <div id="adminCoursesList" class="mt-6 space-y-4"></div>
                 </div>
 
                 <div class="glass p-8">
-                    <h3 class="font-black mb-6 text-blue-400">إضافة محاضرة جديدة</h3>
+                    <h3 class="font-black mb-6 text-blue-400">إدارة المحاضرات</h3>
                     <select id="cSelect" onchange="loadAdminItems()" class="edit-input"></select>
                     <input type="text" id="lTitle" placeholder="عنوان المحاضرة" class="edit-input">
-                    <input type="text" id="lVid" placeholder="ضع رابط يوتيوب هنا (أي رابط سيعمل)" class="edit-input border-blue-500/50">
+                    <input type="text" id="lVid" placeholder="رابط يوتيوب" class="edit-input">
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="number" id="lDuration" placeholder="المدة (د)" class="edit-input">
+                        <input type="number" id="lDuration" placeholder="المدة" class="edit-input">
                         <input type="number" id="lAttempts" placeholder="المحاولات" class="edit-input">
                     </div>
-                    <button onclick="addItem()" class="bg-blue-600 w-full py-4 rounded-xl font-black">إضافة المحاضرة</button>
-                    <div id="adminItemsList" class="mt-6 space-y-3 text-sm"></div>
+                    <button onclick="addItem()" class="bg-blue-600 w-full py-4 rounded-xl font-black text-white">إضافة</button>
+                    <div id="adminItemsList" class="mt-6 space-y-3"></div>
                 </div>
             </div>
 
             <div id="tab-bank" class="admin-tab hidden glass p-8">
-                <h3 class="font-black text-green-500 mb-6">بنك الأسئلة</h3>
                 <select id="lSelectBank" onchange="loadQuestionsAdmin()" class="edit-input"></select>
-                <textarea id="qText" placeholder="اكتب السؤال هنا..." class="edit-input h-20"></textarea>
-                <div class="grid grid-cols-2 gap-3">
+                <textarea id="qText" placeholder="السؤال" class="edit-input h-20"></textarea>
+                <div class="grid grid-cols-2 gap-2">
                     <input type="text" id="opt0" placeholder="خيار 1" class="edit-input">
                     <input type="text" id="opt1" placeholder="خيار 2" class="edit-input">
                     <input type="text" id="opt2" placeholder="خيار 3" class="edit-input">
                     <input type="text" id="opt3" placeholder="خيار 4" class="edit-input">
                 </div>
-                <select id="correctIdx" class="edit-input">
-                    <option value="0">الخيار 1 صحيح</option>
-                    <option value="1">الخيار 2 صحيح</option>
-                    <option value="2">الخيار 3 صحيح</option>
-                    <option value="3">الخيار 4 صحيح</option>
-                </select>
-                <button onclick="saveQuestion()" class="gold-gradient w-full py-3 rounded-xl">إضافة للسؤال</button>
+                <select id="correctIdx" class="edit-input"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option></select>
+                <button onclick="saveQuestion()" class="gold-gradient w-full py-3 rounded-xl">حفظ السؤال</button>
                 <div id="qListArea" class="mt-6 grid gap-4"></div>
             </div>
 
             <div id="tab-students" class="admin-tab hidden glass p-8">
-                <h3 class="font-black mb-4">إدارة الطلاب</h3>
-                <textarea id="bulkNames" class="edit-input h-24" placeholder="اكتب الأسماء هنا (كل اسم في سطر)"></textarea>
-                <button onclick="generateStudents()" class="gold-gradient px-10 py-4 rounded-xl font-black">توليد أكواد للطلاب</button>
+                <textarea id="bulkNames" class="edit-input h-24" placeholder="الأسماء"></textarea>
+                <button onclick="generateStudents()" class="gold-gradient px-10 py-4 rounded-xl">توليد أكواد</button>
                 <div id="stdsList" class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4"></div>
             </div>
         </div>
@@ -134,43 +110,35 @@
 
     <div id="homePage" class="page p-6">
         <div class="max-w-7xl mx-auto">
-            <div class="flex justify-between items-center mb-10 glass p-6 border-r-8 border-yellow-500">
-                <h2 class="text-2xl font-black text-yellow-500 italic" id="welcomeMsg">أهلاً بك يا بطل</h2>
-                <button onclick="logout()" class="bg-red-500/10 text-red-500 px-4 py-2 rounded-xl">خروج</button>
-            </div>
+            <div id="welcomeMsg" class="glass p-6 mb-10 text-yellow-500 font-black text-2xl"></div>
             <div id="courseGrid" class="grid grid-cols-1 md:grid-cols-3 gap-8"></div>
         </div>
     </div>
 
     <div id="courseDetailsPage" class="page p-6">
         <div class="max-w-4xl mx-auto">
-            <button onclick="showPage('homePage')" class="mb-6 text-yellow-500 font-bold flex items-center gap-2"><i class="fa-solid fa-arrow-right"></i> رجوع</button>
+            <button onclick="showPage('homePage')" class="mb-6 text-yellow-500 font-bold">← رجوع</button>
             <div id="itemsList" class="space-y-4"></div>
         </div>
     </div>
 
     <div id="lectureViewPage" class="page p-6">
         <div class="max-w-5xl mx-auto text-center">
-            <button onclick="showPage('courseDetailsPage')" class="mb-6 bg-white/5 px-6 py-2 rounded-xl text-yellow-500">رجوع للقائمة</button>
             <h2 id="vidTitle" class="text-3xl font-black mb-8 text-yellow-500"></h2>
             <div id="vidArea" class="video-container mb-8"></div>
-            <button id="goToExamBtn" class="gold-gradient px-16 py-5 rounded-2xl text-xl font-black">ابدأ الامتحان التفاعلي</button>
+            <button id="goToExamBtn" class="gold-gradient px-16 py-5 rounded-2xl font-black">دخول الامتحان</button>
         </div>
     </div>
 
     <div id="examPage" class="page p-6">
-        <div class="max-w-3xl mx-auto">
-            <div class="glass p-6 sticky top-4 z-50 flex justify-between items-center mb-8 border-b-4 border-yellow-500">
-                <span id="exTitle" class="font-black text-yellow-500">الامتحان</span>
-                <div id="timer" class="bg-red-600 px-6 py-2 rounded-full font-black text-xl">00:00</div>
-            </div>
-            <div id="questionsArea" class="space-y-6"></div>
-            <button onclick="finishExam()" class="gold-gradient w-full py-6 rounded-2xl mt-10 text-xl">إرسال الإجابات</button>
-        </div>
+        <div id="questionsArea" class="max-w-3xl mx-auto space-y-6"></div>
+        <button onclick="finishExam()" class="max-w-3xl mx-auto gold-gradient w-full py-6 rounded-2xl mt-10">إرسال</button>
     </div>
 
+    <div id="printContainer" class="hidden"></div>
+
     <script>
-        // دالة سحرية لاستخراج ID الفيديو من أي رابط يوتيوب
+        // دالة تحويل رابط يوتيوب تلقائياً
         function getYouTubeId(url) {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             const match = url.match(regExp);
@@ -185,26 +153,18 @@
             messagingSenderId: "1047108891102",
             appId: "1:1047108891102:web:b9b1b983d3dfb7dae4ed4f"
         };
-
         firebase.initializeApp(firebaseConfig);
         const fdb = firebase.firestore();
 
-        let db = { courses: [], students: [], results: [], currentUser: null };
+        let db = { courses: [], students: [], results: [], currentUser: null, editTarget: null };
 
         async function sync() {
-            await fdb.collection('platform_data').doc('main_db').set({
-                courses: db.courses, students: db.students, results: db.results
-            });
+            await fdb.collection('platform_data').doc('main_db').set(db);
         }
 
         async function loadData() {
             const doc = await fdb.collection('platform_data').doc('main_db').get();
-            if (doc.exists) {
-                const data = doc.data();
-                db.courses = data.courses || [];
-                db.students = data.students || [];
-                db.results = data.results || [];
-            }
+            if(doc.exists) { db = doc.data(); loadAdminCourses(); }
         }
 
         function showPage(id) {
@@ -213,74 +173,82 @@
         }
 
         function handleLogin() {
-            const code = document.getElementById('authCode').value.trim();
-            if(code === '22574') { switchTab('content'); showPage('adminPage'); return; }
+            const code = document.getElementById('authCode').value;
+            if(code === '22574') { showPage('adminPage'); switchTab('content'); return; }
             const s = db.students.find(x => x.code === code);
-            if(s) {
-                db.currentUser = s;
-                document.getElementById('welcomeMsg').innerText = `أهلاً يا ${s.name}`;
-                renderCourses(); showPage('homePage');
-            } else alert("الكود خطأ!");
+            if(s) { db.currentUser = s; document.getElementById('welcomeMsg').innerText = `أهلاً ${s.name}`; renderCourses(); showPage('homePage'); }
         }
 
         function addCourse() {
             const name = document.getElementById('cName').value;
             const year = document.getElementById('cYearSelect').value;
-            db.courses.push({ id: Date.now(), name, year, items: [], status: 'paid' });
+            if(db.editTarget) {
+                const c = db.courses.find(x => x.id === db.editTarget);
+                c.name = name; c.year = year;
+                db.editTarget = null;
+                document.getElementById('courseFormTitle').innerText = "إضافة كورس";
+            } else {
+                db.courses.push({ id: Date.now(), name, year, items: [] });
+            }
             sync(); loadAdminCourses();
         }
 
-        function addItem() {
-            const ci = document.getElementById('cSelect').value;
-            const rawVid = document.getElementById('lVid').value;
-            const cleanVid = getYouTubeId(rawVid); // هنا التحويل السحري
-            
-            const item = {
-                id: Date.now(),
-                title: document.getElementById('lTitle').value,
-                vid: cleanVid,
-                duration: document.getElementById('lDuration').value || 15,
-                attempts: document.getElementById('lAttempts').value || 2,
-                questions: []
-            };
-            db.courses[ci].items.push(item);
-            sync(); loadAdminItems(); alert("تمت إضافة المحاضرة بنجاح!");
+        function editCourse(id) {
+            const c = db.courses.find(x => x.id === id);
+            document.getElementById('cName').value = c.name;
+            document.getElementById('cYearSelect').value = c.year;
+            db.editTarget = id;
+            document.getElementById('courseFormTitle').innerText = "تعديل الكورس";
         }
 
-        function viewLecture(cid, iid) {
-            const item = db.courses.find(x => x.id == cid).items.find(x => x.id == iid);
-            showPage('lectureViewPage');
-            document.getElementById('vidTitle').innerText = item.title;
-            // استخدام الـ ID المحول لعرض الفيديو
-            document.getElementById('vidArea').innerHTML = `
-                <iframe src="https://www.youtube.com/embed/${item.vid}?rel=0" frameborder="0" allowfullscreen></iframe>
-            `;
-            document.getElementById('goToExamBtn').onclick = () => startExam(cid, iid);
-        }
-
-        function switchTab(t) {
-            document.querySelectorAll('.admin-tab').forEach(x => x.classList.add('hidden'));
-            document.getElementById('tab-'+t).classList.remove('hidden');
-            if(t === 'content') loadAdminCourses();
+        function deleteCourse(id) {
+            if(confirm("حذف؟")) { db.courses = db.courses.filter(x => x.id !== id); sync(); loadAdminCourses(); }
         }
 
         function loadAdminCourses() {
             const list = document.getElementById('adminCoursesList');
-            list.innerHTML = db.courses.map((c, i) => `<div class="bg-slate-900 p-4 rounded-xl flex justify-between"><span>${c.name}</span></div>`).join('');
+            list.innerHTML = db.courses.map(c => `
+                <div class="bg-slate-900 p-4 rounded-xl flex justify-between">
+                    <span>${c.name}</span>
+                    <div class="flex gap-2">
+                        <button onclick="editCourse(${c.id})" class="text-blue-400">تعديل</button>
+                        <button onclick="deleteCourse(${c.id})" class="text-red-400">حذف</button>
+                    </div>
+                </div>
+            `).join('');
             document.getElementById('cSelect').innerHTML = db.courses.map((c, i) => `<option value="${i}">${c.name}</option>`).join('');
+        }
+
+        function addItem() {
+            const ci = document.getElementById('cSelect').value;
+            const item = {
+                id: Date.now(),
+                title: document.getElementById('lTitle').value,
+                vid: getYouTubeId(document.getElementById('lVid').value), // التحويل التلقائي
+                duration: document.getElementById('lDuration').value,
+                attempts: document.getElementById('lAttempts').value,
+                questions: []
+            };
+            db.courses[ci].items.push(item);
+            sync(); loadAdminItems();
         }
 
         function loadAdminItems() {
             const ci = document.getElementById('cSelect').value;
             const list = document.getElementById('adminItemsList');
             if(!db.courses[ci]) return;
-            list.innerHTML = db.courses[ci].items.map(it => `<div>• ${it.title}</div>`).join('');
+            list.innerHTML = db.courses[ci].items.map((it, ii) => `
+                <div class="flex justify-between bg-white/5 p-2 rounded">
+                    <span>${it.title}</span>
+                    <button onclick="db.courses[${ci}].items.splice(${ii},1);sync();loadAdminItems()" class="text-red-500 text-xs">حذف</button>
+                </div>
+            `).join('');
         }
 
         function renderCourses() {
             const grid = document.getElementById('courseGrid');
             grid.innerHTML = db.courses.filter(c => c.year === db.currentUser.year).map(c => `
-                <div class="glass p-6 text-center cursor-pointer" onclick="openCourse(${c.id})">
+                <div class="glass p-8 text-center cursor-pointer" onclick="openCourse(${c.id})">
                     <h3 class="text-2xl font-black text-yellow-500">${c.name}</h3>
                 </div>
             `).join('');
@@ -291,18 +259,23 @@
             showPage('courseDetailsPage');
             document.getElementById('itemsList').innerHTML = c.items.map(it => `
                 <div class="glass p-6 flex justify-between items-center">
-                    <span class="font-bold">${it.title}</span>
-                    <button onclick="viewLecture(${id}, ${it.id})" class="gold-gradient px-6 py-2 rounded-xl text-xs">فتح الدرس</button>
+                    <span>${it.title}</span>
+                    <button onclick="viewLecture(${id}, ${it.id})" class="gold-gradient px-6 py-2 rounded-xl">فتح</button>
                 </div>
             `).join('');
         }
 
-        function generateStudents() {
-            const names = document.getElementById('bulkNames').value.split('\n');
-            names.forEach(n => {
-                if(n.trim()) db.students.push({ name: n.trim(), code: 'MC-' + Math.floor(1000 + Math.random() * 9000), year: '3' });
-            });
-            sync(); alert("تم توليد الأكواد!");
+        function viewLecture(cid, iid) {
+            const item = db.courses.find(x => x.id == cid).items.find(x => x.id == iid);
+            showPage('lectureViewPage');
+            document.getElementById('vidTitle').innerText = item.title;
+            document.getElementById('vidArea').innerHTML = `<iframe src="https://www.youtube.com/embed/${item.vid}" frameborder="0" allowfullscreen></iframe>`;
+            document.getElementById('goToExamBtn').onclick = () => startExam(cid, iid);
+        }
+
+        function switchTab(t) {
+            document.querySelectorAll('.admin-tab').forEach(x => x.classList.add('hidden'));
+            document.getElementById('tab-'+t).classList.remove('hidden');
         }
 
         function logout() { location.reload(); }
