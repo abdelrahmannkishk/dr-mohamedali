@@ -35,22 +35,8 @@
         .locked { filter: grayscale(1); opacity: 0.6; cursor: not-allowed; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         #scoreModal { display: none; background: rgba(0,0,0,0.8); backdrop-blur: 5px; }
-        #quizTimer { position: fixed; top: 20px; left: 20px; background: #dc2626; color: white; padding: 10px 20px; border-radius: 15px; font-weight: 900; z-index: 100; box-shadow: 0 5px 15px rgba(220, 38, 38, 0.4); }
-        
-        /* Watermark Style - Updated to RED */
+        /* Video Player Style */
         #videoWrapper { position: relative; width: 100%; border-radius: 40px; overflow: hidden; background: #000; }
-        #videoWatermark {
-            position: absolute;
-            z-index: 9999;
-            color: #ff0000; /* Red Color */
-            font-weight: 900;
-            pointer-events: none;
-            font-size: 16px;
-            white-space: nowrap;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            transition: all 1.2s linear;
-            opacity: 0.8;
-        }
     </style>
 </head>
 <body>
@@ -136,10 +122,8 @@
             
             <div id="videoArea" class="hidden">
                 <div id="videoWrapper" class="shadow-2xl border-8 border-white relative">
-                    <div id="videoWatermark"></div>
-                    
-                    <div class="relative pt-[56.25%]">
-                        <iframe id="mainIframe" class="absolute inset-0 w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="no-referrer"></iframe>
+                    <div class="relative pt-[56.25%]" id="iframeContainer">
+                        <!-- Iframe injected dynamically here -->
                     </div>
                 </div>
             </div>
@@ -312,10 +296,10 @@
             showSection('lessons');
         };
 
-        // Ultimate Video Fix & Red Watermark
+        // Ultimate Video Fix & Subtle Watermark
         window.playVideo = (url) => {
             const area = document.getElementById('videoArea');
-            const iframe = document.getElementById('mainIframe');
+            const container = document.getElementById('iframeContainer');
             area.classList.remove('hidden');
 
             let videoID = "";
@@ -325,22 +309,10 @@
             else if(url.includes('youtu.be/')) videoID = url.split('youtu.be/')[1].split('?')[0];
             else videoID = url.trim();
 
-            // Set source with minimal controls to avoid issues
-            iframe.src = `https://www.youtube.com/embed/${videoID}?autoplay=1&rel=0&showinfo=0&modestbranding=1`;
+            // Inject a completely fresh iframe element to circumvent Edge caching Origin Error 153
+            container.innerHTML = `<iframe class="absolute inset-0 w-full h-full" src="https://www.youtube.com/embed/${videoID}?autoplay=1&rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
 
-            // Start Secure Red Watermark
-            const wm = document.getElementById('videoWatermark');
-            wm.innerText = `${user.name} | ${user.phone}`;
-            
-            if(wmInterval) clearInterval(wmInterval);
-            const moveWM = () => {
-                const x = Math.random() * 60 + 5; // keep inside video frame
-                const y = Math.random() * 70 + 10;
-                wm.style.left = x + "%";
-                wm.style.top = y + "%";
-            };
-            moveWM();
-            wmInterval = setInterval(moveWM, 3000); // Faster movement for security
+            if(wmInterval) { clearInterval(wmInterval); wmInterval = null; }
 
             window.scrollTo(0,0);
         };
