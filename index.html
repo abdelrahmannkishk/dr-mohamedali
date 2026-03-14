@@ -34,7 +34,7 @@
         .nav-item.active { color: #dc2626; }
         .locked { filter: grayscale(1); opacity: 0.6; cursor: not-allowed; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        #scoreModal { display: none; background: rgba(0,0,0,0.8); backdrop-blur: 5px; }
+        #scoreModal, #customModal { display: none; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
         /* Video Player Style */
         #videoWrapper { position: relative; width: 100%; border-radius: 40px; overflow: hidden; background: #000; }
     </style>
@@ -49,6 +49,18 @@
             <h2 class="text-2xl font-black mb-2">نتيجتك في الاختبار</h2>
             <div id="scoreValue" class="text-5xl font-black text-red-600 mb-6">0%</div>
             <button onclick="document.getElementById('scoreModal').style.display='none'; document.getElementById('quizTimer').classList.add('hidden');" class="w-full btn-main py-4">استمرار</button>
+        </div>
+    </div>
+
+    <div id="customModal" class="fixed inset-0 z-[2000001] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[40px] p-8 text-center animate__animated animate__zoomIn">
+            <h3 id="modalTitle" class="text-2xl font-black mb-4">تنبيه</h3>
+            <p id="modalMsg" class="font-bold text-slate-500 mb-6"></p>
+            <input id="modalInput" class="hidden w-full p-4 bg-slate-50 rounded-2xl mb-6 text-center font-bold outline-none border-2">
+            <div class="flex gap-4">
+                <button id="modalNo" class="flex-1 bg-slate-100 py-4 rounded-2xl font-black text-slate-500">إلغاء</button>
+                <button id="modalYes" class="flex-1 btn-main py-4">تأكيد</button>
+            </div>
         </div>
     </div>
 
@@ -102,8 +114,8 @@
                 <input type="text" id="cInp" placeholder="ادخل الكود هنا" class="w-full p-5 bg-slate-50 border-4 border-dashed rounded-[30px] text-center text-3xl font-black mb-6 outline-none">
                 <button onclick="useCode()" class="w-full btn-main py-6 text-2xl mb-4">تفعيل الآن ⚡</button>
                 <div class="grid grid-cols-2 gap-4 mt-4">
-                    <a href="https://wa.me/201550908118" target="_blank" class="p-4 bg-green-100 text-green-700 rounded-2xl font-black flex items-center justify-center gap-2"><i class="fab fa-whatsapp"></i> طلب كود</a>
-                    <a href="https://wa.me/201550908118" target="_blank" class="p-4 bg-blue-100 text-blue-700 rounded-2xl font-black flex items-center justify-center gap-2"><i class="fas fa-headset"></i> الدعم الفني</a>
+                    <button onclick="reqRecharge()" class="p-4 bg-red-100 text-red-700 rounded-2xl font-black flex items-center justify-center gap-2"><i class="fas fa-money-bill-wave"></i> طلب شحن</button>
+                    <a href="https://wa.me/201550908118" target="_blank" class="p-4 bg-green-100 text-green-700 rounded-2xl font-black flex items-center justify-center gap-2"><i class="fab fa-whatsapp"></i> واتساب</a>
                 </div>
             </div>
         </div>
@@ -145,6 +157,7 @@
                 <button onclick="admTab('qu')" class="w-full p-4 bg-white rounded-xl text-right font-black border">إدارة الأسئلة</button>
                 <button onclick="admTab('st')" class="w-full p-4 bg-white rounded-xl text-right font-black border text-red-600">إدارة الطلاب 👤</button>
                 <button onclick="admTab('qs')" class="w-full p-4 bg-white rounded-xl text-right font-black border text-blue-600">أوائل الامتحانات</button>
+                <button onclick="admTab('rr')" class="w-full p-4 bg-white rounded-xl text-right font-black border text-green-600 relative">طلبات الشحن 📥</button>
                 <button onclick="admTab('fm')" class="w-full p-4 bg-white rounded-xl text-right font-black border text-purple-600">تحكم المنتدى</button>
                 <button onclick="admTab('co')" class="w-full p-4 bg-white rounded-xl text-right font-black border text-yellow-600">توليد أكواد</button>
             </aside>
@@ -176,7 +189,18 @@
         async function handleLogin() {
             const ph = document.getElementById('lPh').value.trim(); const ps = document.getElementById('lPs').value.trim();
             if(ph === "01550908118" && ps === "22574") { user = { name: "الكينج محمد علي", phone: ph, role: 'admin', level: 'ALL', balance: 999999 }; localStorage.setItem('golden_user', JSON.stringify(user)); location.reload(); }
-            else { const snap = await window.get(window.ref(window.db, 'academy/students/'+ph)); if(snap.exists() && snap.val().pass === ps) { user = snap.val(); localStorage.setItem('golden_user', JSON.stringify(user)); location.reload(); } else alert("خطأ!"); }
+            else { 
+                const snap = await window.get(window.ref(window.db, 'academy/students/'+ph)); 
+                if(snap.exists() && snap.val().pass === ps) { 
+                    const u = snap.val();
+                    if(u.locked) return alert("هذا الحساب محظور! تواصل مع الدعم.");
+                    const sK = Math.random().toString(36).substr(2, 9);
+                    u.sessionKey = sK;
+                    await window.update(window.ref(window.db, 'academy/students/'+ph), { sessionKey: sK });
+                    localStorage.setItem('king_sessionKey', sK);
+                    user = u; localStorage.setItem('golden_user', JSON.stringify(user)); location.reload(); 
+                } else alert("خطأ!"); 
+            }
         }
         async function handleRegister() {
             const ph = document.getElementById('rPh').value.trim();
@@ -201,6 +225,7 @@
                 dbData.quizResults = getCached('quizResults') || {};
                 dbData.chats = getCached('chats') || {};
                 dbData.students = {}; 
+                dbData.rechargeRequests = {};
                 renderCourses(); renderForum(); renderRanks();
                 if(user.role !== 'admin') document.getElementById('dBal').innerText = (user.balance || 0) + " ج.م";
 
@@ -241,6 +266,9 @@
                     window.onValue(window.ref(window.db, 'academy/students/' + user.phone), snap => {
                         if(snap.exists()) {
                             const newUserData = snap.val();
+                            if(newUserData.locked) { alert("تم حظر حسابك!"); logout(); return; }
+                            const localSK = localStorage.getItem('king_sessionKey');
+                            if(newUserData.sessionKey && localSK && newUserData.sessionKey !== localSK) { alert("تم تسجيل الدخول من جهاز آخر!"); logout(); return; }
                             // Only update specific fields to prevent overriding ongoing local interactions unnecessarily
                             user.balance = newUserData.balance;
                             user.courses = newUserData.courses || {};
@@ -249,9 +277,6 @@
                             // Re-render courses if access changed
                             const currentCoursesHTML = document.getElementById('coursesGrid').innerHTML;
                             renderCourses();
-                            if(document.getElementById('coursesGrid').innerHTML !== currentCoursesHTML) {
-                                // optional: show a notification that access was granted
-                            }
                         }
                     });
                 } else {
@@ -261,6 +286,11 @@
                     window.onValue(window.ref(window.db, 'academy/students'), snap => {
                         console.log("Admin Students Update:", snap.val());
                         if(snap.exists()) { dbData.students = snap.val(); window.admRefresh(); }
+                    });
+                    // Listen to recharge requests
+                    window.onValue(window.ref(window.db, 'academy/rechargeRequests'), snap => {
+                        dbData.rechargeRequests = snap.exists() ? snap.val() : {};
+                        window.admRefresh();
                     });
                 }
             }
@@ -372,7 +402,10 @@
                 b.innerHTML = `<h3 class="text-2xl font-black mb-6">إدارة المحاضرات</h3><select id="lch" class="${s}">${Object.values(dbData.chapters||{}).map(c=>`<option value="${c.id}">${c.title}</option>`).join('')}</select><input id="lt" placeholder="العنوان" class="${s}"><input id="lu" placeholder="رابط فيديو" class="${s}"><button id="leBtn" onclick="svLe()" class="w-full btn-main py-4">رفع</button><div class="mt-8 space-y-2">${Object.values(dbData.lectures||{}).map(l=>`<div class="p-3 border rounded-xl flex justify-between bg-white shadow-sm font-bold"><span>${l.title}</span><div class="flex gap-2"><button onclick="editLe('${l.id}')" class="text-blue-600">تعديل ✍️</button><button onclick="delItem('lectures','${l.id}')" class="text-red-600">حذف 🗑️</button></div></div>`).join('')}</div>`;
             }
             if(t === 'st') {
-                b.innerHTML = `<h3 class="text-2xl font-black mb-6">إدارة الطلاب</h3><div class="space-y-4">${Object.values(dbData.students || {}).map(st => `<div class="p-4 bg-white border rounded-2xl flex flex-wrap justify-between items-center gap-4"><div class="font-black text-sm">👤 ${st.name} <br> <span class="text-xs text-slate-400">📱 ${st.phone} | 💰 ${st.balance} ج.م</span></div><div class="flex gap-2"><input type="number" id="bal_${st.phone}" placeholder="+ رصيد" class="w-24 p-2 border rounded-xl text-xs"><button onclick="addBalMan('${st.phone}')" class="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold italic">شحن</button></div></div>`).join('')}</div>`;
+                b.innerHTML = `<h3 class="text-2xl font-black mb-6">إدارة الطلاب</h3><div class="space-y-4">${Object.values(dbData.students || {}).map(st => `<div class="p-4 bg-white border rounded-2xl flex flex-wrap justify-between items-center gap-4 ${st.locked ? 'bg-red-50' : ''}"><div class="font-black text-sm">👤 ${st.name} ${st.locked ? '<span class="text-red-600">[محظور]</span>' : ''} <br> <span class="text-xs text-slate-400">📱 ${st.phone} | 💰 ${st.balance} ج.م</span></div><div class="flex gap-2"><button onclick="toggleLock('${st.phone}', ${st.locked || false})" class="px-4 py-2 rounded-xl text-xs font-bold ${st.locked ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}">${st.locked ? 'فك حظر ✅' : 'حظر 🚫'}</button><input type="number" id="bal_${st.phone}" placeholder="+ رصيد" class="w-24 p-2 border rounded-xl text-xs"><button onclick="addBalMan('${st.phone}')" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold italic">شحن</button></div></div>`).join('')}</div>`;
+            }
+            if(t === 'rr') {
+                b.innerHTML = `<h3 class="text-2xl font-black mb-6">طلبات الشحن المعلقة</h3><div class="space-y-4">${Object.values(dbData.rechargeRequests || {}).map(r => `<div class="p-6 bg-white border-2 rounded-[30px] flex justify-between items-center shadow-lg"><div class="font-black"><p class="text-xl">💰 ${r.amount} ج.م</p><p class="text-xs text-slate-400">👤 ${r.name} | 📱 ${r.phone}</p></div><div class="flex gap-3"><button onclick="accReq('${r.id}', '${r.phone}', ${r.amount})" class="bg-green-600 text-white px-8 py-3 rounded-2xl font-black">قبول ✅</button><button onclick="rejReq('${r.id}')" class="bg-slate-100 text-slate-400 px-8 py-3 rounded-2xl font-black">رفض ❌</button></div></div>`).join('')}</div>`;
             }
             if(t === 'qu') {
                 editingQId = null;
@@ -434,8 +467,47 @@
         };
 
         window.showLecRanks = (id) => { const res = Object.values(dbData.quizResults || {}).filter(r => r.lecId === id).sort((a,b) => b.score - a.score); document.getElementById('lecRanksBox').innerHTML = res.map((r, i) => `<div class="p-4 bg-slate-50 rounded-xl flex justify-between font-bold"><span>${i+1}. ${r.student}</span><span class="text-red-600">${r.score}%</span></div>`).join(''); };
-        window.delItem = async (p, id) => { if(confirm("حذف؟")) { await window.remove(window.ref(window.db, `academy/${p}/${id}`)); alert("تم!"); location.reload(); } };
+        window.delItem = async (p, id) => { if(await confirmK("تأكيد الحذف؟", "هذا الإجراء لا يمكن التراجع عنه.")) { await window.remove(window.ref(window.db, `academy/${p}/${id}`)); alert("تم!"); location.reload(); } };
         window.upImg = (i) => { const r = new FileReader(); r.onload = (e) => tempImg = e.target.result; r.readAsDataURL(i.files[0]); };
+        
+        window.confirmK = (t, m) => {
+            return new Promise(res => {
+                const d = document.getElementById('customModal'); d.style.display = 'flex';
+                document.getElementById('modalTitle').innerText = t; document.getElementById('modalMsg').innerText = m;
+                document.getElementById('modalInput').classList.add('hidden');
+                document.getElementById('modalNo').onclick = () => { d.style.display = 'none'; res(false); };
+                document.getElementById('modalYes').onclick = () => { d.style.display = 'none'; res(true); };
+            });
+        };
+        window.promptK = (t, m) => {
+            return new Promise(res => {
+                const d = document.getElementById('customModal'); d.style.display = 'flex';
+                document.getElementById('modalTitle').innerText = t; document.getElementById('modalMsg').innerText = m;
+                const inp = document.getElementById('modalInput'); inp.classList.remove('hidden'); inp.value = ""; inp.focus();
+                document.getElementById('modalNo').onclick = () => { d.style.display = 'none'; res(null); };
+                document.getElementById('modalYes').onclick = () => { d.style.display = 'none'; res(inp.value); };
+            });
+        };
+
+        window.toggleLock = async (ph, current) => { if(await confirmK(current ? "فك الحظر؟" : "حظر الطالب؟", "هل أنت متأكد من تغيير حالة هذا الطالب؟")) await window.update(window.ref(window.db, 'academy/students/'+ph), { locked: !current }); };
+        window.reqRecharge = async () => {
+            const amt = await promptK("طلب شحن رصيد", "أدخل المبلغ الذي قمت بتحويله:");
+            if(!amt || isNaN(amt)) return;
+            const id = "REQ"+Date.now();
+            await window.set(window.ref(window.db, 'academy/rechargeRequests/'+id), { id, phone: user.phone, name: user.name, amount: parseInt(amt), time: Date.now(), status: 'pending' });
+            alert("تم إرسال طلبك! سيتم المراجعة والتحويل فوراً. ✅");
+        };
+        window.accReq = async (id, ph, amt) => {
+            if(!await confirmK("قبول الطلب؟", "سيتم إضافة المبلغ لرصيد الطالب.")) return;
+            const snap = await window.get(window.ref(window.db, 'academy/students/'+ph));
+            const curBal = snap.exists() ? (snap.val().balance || 0) : 0;
+            const updates = {};
+            updates[`academy/students/${ph}/balance`] = curBal + amt;
+            updates[`academy/rechargeRequests/${id}`] = null;
+            await window.update(window.ref(window.db), updates);
+            alert("تم القبول والشحن! ✅");
+        };
+        window.rejReq = async (id) => { if(await confirmK("رفض الطلب؟", "هل تريد حذف هذا الطلب؟")) await window.remove(window.ref(window.db, 'academy/rechargeRequests/'+id)); };
         
         window.svCh = async () => { 
             const id = editingCHId || "CH"+Date.now(); 
