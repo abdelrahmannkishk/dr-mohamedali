@@ -200,16 +200,82 @@
             await window.set(window.ref(window.db, 'academy/students/'+ph), u); alert("تم!"); toggleAuth('login');
         }
 
+        function getCached(key) { try { const data = localStorage.getItem('king_' + key); return data ? JSON.parse(data) : null; } catch(e) { return null; } }
+        function setCached(key, val) { try { localStorage.setItem('king_' + key, JSON.stringify(val)); } catch(e) {} }
+
         function initApp() {
             const saved = localStorage.getItem('golden_user');
             if(saved) {
                 user = JSON.parse(saved); document.getElementById('authScreen').classList.add('hidden');
                 document.getElementById('mainHeader').classList.remove('hidden'); document.getElementById('bottomNav').classList.remove('hidden');
                 if(user.role === 'admin') document.getElementById('admQuick').classList.remove('hidden');
-                window.onValue(window.ref(window.db, 'academy'), snap => {
-                    dbData = snap.val() || {}; renderCourses(); renderForum(); renderRanks();
-                    if(user.role !== 'admin' && dbData.students?.[user.phone]) { user = dbData.students[user.phone]; document.getElementById('dBal').innerText = user.balance + " ج.م"; }
+                
+                // Load from cache initially for instant UI
+                dbData.chapters = getCached('chapters') || {};
+                dbData.lectures = getCached('lectures') || {};
+                dbData.questions = getCached('questions') || {};
+                dbData.quizResults = getCached('quizResults') || {};
+                dbData.chats = getCached('chats') || {};
+                renderCourses(); renderForum(); renderRanks();
+                if(user.role !== 'admin') document.getElementById('dBal').innerText = (user.balance || 0) + " ج.م";
+
+                // Specific Listener: Chapters
+                window.onValue(window.ref(window.db, 'academy/chapters'), snap => {
+                    if(snap.exists()) { dbData.chapters = snap.val(); setCached('chapters', dbData.chapters); renderCourses(); }
                 });
+                
+                // Specific Listener: Lectures
+                window.onValue(window.ref(window.db, 'academy/lectures'), snap => {
+                    if(snap.exists()) { dbData.lectures = snap.val(); setCached('lectures', dbData.lectures); renderCourses(); }
+                });
+
+                // Specific Listener: Questions
+                window.onValue(window.ref(window.db, 'academy/questions'), snap => {
+                    if(snap.exists()) { dbData.questions = snap.val(); setCached('questions', dbData.questions); }
+                });
+
+                // Specific Listener: Chats (Forum)
+                window.onValue(window.ref(window.db, 'academy/chats'), snap => {
+                    if(snap.exists()) { 
+                        const newChats = snap.val();
+                        const isNew = Object.keys(newChats).length !== Object.keys(dbData.chats).length;
+                        dbData.chats = newChats; 
+                        setCached('chats', dbData.chats); 
+                        if(isNew || document.getElementById('chatBox').innerHTML === '') renderForum(); 
+                    }
+                });
+
+                // Specific Listener: Quiz Results (Ranks)
+                window.onValue(window.ref(window.db, 'academy/quizResults'), snap => {
+                    if(snap.exists()) { dbData.quizResults = snap.val(); setCached('quizResults', dbData.quizResults); renderRanks(); }
+                });
+
+                // Specific Listener: Current User (Wallet & access)
+                if(user.role !== 'admin') {
+                    window.onValue(window.ref(window.db, 'academy/students/' + user.phone), snap => {
+                        if(snap.exists()) {
+                            const newUserData = snap.val();
+                            // Only update specific fields to prevent overriding ongoing local interactions unnecessarily
+                            user.balance = newUserData.balance;
+                            user.courses = newUserData.courses || {};
+                            localStorage.setItem('golden_user', JSON.stringify(user));
+                            document.getElementById('dBal').innerText = user.balance + " ج.م";
+                            // Re-render courses if access changed
+                            const currentCoursesHTML = document.getElementById('coursesGrid').innerHTML;
+                            renderCourses();
+                            if(document.getElementById('coursesGrid').innerHTML !== currentCoursesHTML) {
+                                // optional: show a notification that access was granted
+                            }
+                        }
+                    });
+                } else {
+                    // Admins need broader access, listen to all students specifically if needed, 
+                    // or just handle it within the admin panel dynamically.
+                    // For admin panel students list:
+                    window.onValue(window.ref(window.db, 'academy/students'), snap => {
+                        if(snap.exists()) dbData.students = snap.val();
+                    });
+                }
             }
         }
 
@@ -379,12 +445,35 @@
         window.closeAdmin = () => document.getElementById('adminPanel').classList.add('hidden');
         window.logout = () => { localStorage.clear(); location.reload(); };
         window.useCode = async () => { const c = document.getElementById('cInp').value.trim().toUpperCase(); if(!c) return; const snap = await window.get(window.ref(window.db, 'academy/codes/'+c)); if(snap.exists() && !snap.val().used) { const amt = parseInt(snap.val().amount); await window.update(window.ref(window.db, 'academy/students/'+user.phone), { balance: (user.balance || 0) + amt }); await window.update(window.ref(window.db, 'academy/codes/'+c), { used: true }); alert("تم الشحن!"); } else alert("خطأ!"); };
-        window.buyCourse = async (id, pr) => { if(user.balance >= pr) { if(confirm("شراء؟")) { const u = {}; u[`academy/students/${user.phone}/balance`] = user.balance - pr; u[`academy/students/${user.phone}/courses/${id}`] = true; await window.update(window.ref(window.db), u); } } else alert("رصيد ناقص!"); };
+        window.buyCourse = async (id, pr) => { 
+            // 1. Fetch fresh balance to prevent stale client data from allowing purchase
+            const snap = await window.get(window.ref(window.db, `academy/students/${user.phone}/balance`));
+            const realBalance = snap.exists() ? snap.val() : (user.balance || 0);
+
+            if(realBalance >= pr) { 
+                if(confirm("شراء؟")) { 
+                    const u = {}; 
+                    u[`academy/students/${user.phone}/balance`] = realBalance - pr; 
+                    u[`academy/students/${user.phone}/courses/${id}`] = true; 
+                    await window.update(window.ref(window.db), u); 
+                } 
+            } else alert("رصيد ناقص!"); 
+        };
         window.sendMsg = async () => { const i = document.getElementById('msgInp'); if(!i.value) return; await window.push(window.ref(window.db, 'academy/chats'), { name: user.name, phone: user.phone, text: i.value, level: user.level, time: Date.now() }); i.value = ""; };
-        function renderForum() { const b = document.getElementById('chatBox'); const cs = Object.values(dbData.chats || {}).filter(m => user.role === 'admin' || m.level === user.level); b.innerHTML = cs.map(m => `<div class="flex flex-col ${m.phone === user.phone ? 'items-end' : 'items-start'}"><span class="text-[9px] opacity-30">${m.name}</span><div class="p-3 rounded-2xl font-bold ${m.phone === user.phone ? 'bg-red-600 text-white' : 'bg-white shadow-sm'}">${m.text}</div></div>`).join(''); b.scrollTop = b.scrollHeight; }
+        function renderForum() { 
+            const b = document.getElementById('chatBox'); 
+            const cs = Object.values(dbData.chats || {}).filter(m => user.role === 'admin' || m.level === user.level); 
+            const isAtBottom = b.scrollHeight - b.scrollTop <= b.clientHeight + 100; // Check if user is near bottom
+            b.innerHTML = cs.map(m => `<div class="flex flex-col ${m.phone === user.phone ? 'items-end' : 'items-start'}"><span class="text-[9px] opacity-30">${m.name}</span><div class="p-3 rounded-2xl font-bold ${m.phone === user.phone ? 'bg-red-600 text-white' : 'bg-white shadow-sm'}">${m.text}</div></div>`).join(''); 
+            if(isAtBottom) b.scrollTop = b.scrollHeight; // Only auto-scroll if already at bottom to prevent hijacking
+        }
         function renderRanks() {
             const list = document.getElementById('ranksList'); if(!dbData.quizResults) return;
-            const grouped = Object.values(dbData.quizResults).reduce((acc, res) => { if(!acc[res.lecId]) acc[res.lecId] = { title: res.lecTitle, students: [] }; acc[res.lecId].students.push(res); return acc; }, {});
+            const grouped = Object.values(dbData.quizResults).reduce((acc, res) => { 
+                if(!acc[res.lecId]) acc[res.lecId] = { title: res.lecTitle || (dbData.lectures && dbData.lectures[res.lecId] ? dbData.lectures[res.lecId].title : 'امتحان'), students: [] }; 
+                acc[res.lecId].students.push(res); 
+                return acc; 
+            }, {});
             list.innerHTML = Object.values(grouped).map(lec => {
                 const top10 = lec.students.sort((a,b) => b.score - a.score).slice(0, 10);
                 return `<div class="royal-card overflow-hidden mb-6"><div class="bg-slate-900 p-4 text-white font-black">${lec.title}</div><div class="p-4">${top10.map((s, i) => `<div class="flex justify-between p-2 border-b"><span>${i+1}. ${s.student}</span><span class="text-red-600">${s.score}%</span></div>`).join('')}</div></div>`;
