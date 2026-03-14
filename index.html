@@ -170,7 +170,7 @@
     </script>
 
     <script>
-        let user = null; let dbData = {}; let tempImg = ""; let editingQId = null; let editingLTId = null; let editingCHId = null; let quizInt = null; let wmInterval = null;
+        let user = null; let dbData = {}; let tempImg = ""; let editingQId = null; let editingLTId = null; let editingCHId = null; let currentAdmTab = null; let quizInt = null; let wmInterval = null;
 
         function toggleAuth(t){ document.getElementById('lForm').classList.toggle('hidden', t==='reg'); document.getElementById('rForm').classList.toggle('hidden', t==='login'); }
         async function handleLogin() {
@@ -200,22 +200,23 @@
                 dbData.questions = getCached('questions') || {};
                 dbData.quizResults = getCached('quizResults') || {};
                 dbData.chats = getCached('chats') || {};
+                dbData.students = {}; 
                 renderCourses(); renderForum(); renderRanks();
                 if(user.role !== 'admin') document.getElementById('dBal').innerText = (user.balance || 0) + " ج.م";
 
                 // Specific Listener: Chapters
                 window.onValue(window.ref(window.db, 'academy/chapters'), snap => {
-                    if(snap.exists()) { dbData.chapters = snap.val(); setCached('chapters', dbData.chapters); renderCourses(); }
+                    if(snap.exists()) { dbData.chapters = snap.val(); setCached('chapters', dbData.chapters); renderCourses(); window.admRefresh(); }
                 });
                 
                 // Specific Listener: Lectures
                 window.onValue(window.ref(window.db, 'academy/lectures'), snap => {
-                    if(snap.exists()) { dbData.lectures = snap.val(); setCached('lectures', dbData.lectures); renderCourses(); }
+                    if(snap.exists()) { dbData.lectures = snap.val(); setCached('lectures', dbData.lectures); renderCourses(); window.admRefresh(); }
                 });
 
                 // Specific Listener: Questions
                 window.onValue(window.ref(window.db, 'academy/questions'), snap => {
-                    if(snap.exists()) { dbData.questions = snap.val(); setCached('questions', dbData.questions); }
+                    if(snap.exists()) { dbData.questions = snap.val(); setCached('questions', dbData.questions); window.admRefresh(); }
                 });
 
                 // Specific Listener: Chats (Forum)
@@ -226,12 +227,13 @@
                         dbData.chats = newChats; 
                         setCached('chats', dbData.chats); 
                         if(isNew || document.getElementById('chatBox').innerHTML === '') renderForum(); 
+                        window.admRefresh();
                     }
                 });
 
                 // Specific Listener: Quiz Results (Ranks)
                 window.onValue(window.ref(window.db, 'academy/quizResults'), snap => {
-                    if(snap.exists()) { dbData.quizResults = snap.val(); setCached('quizResults', dbData.quizResults); renderRanks(); }
+                    if(snap.exists()) { dbData.quizResults = snap.val(); setCached('quizResults', dbData.quizResults); renderRanks(); window.admRefresh(); }
                 });
 
                 // Specific Listener: Current User (Wallet & access)
@@ -257,7 +259,8 @@
                     // or just handle it within the admin panel dynamically.
                     // For admin panel students list:
                     window.onValue(window.ref(window.db, 'academy/students'), snap => {
-                        if(snap.exists()) dbData.students = snap.val();
+                        console.log("Admin Students Update:", snap.val());
+                        if(snap.exists()) { dbData.students = snap.val(); window.admRefresh(); }
                     });
                 }
             }
@@ -356,7 +359,9 @@
             window.curA = {};
         };
 
+        window.admRefresh = () => { if(currentAdmTab) admTab(currentAdmTab); };
         window.admTab = (t) => {
+            currentAdmTab = t;
             const b = document.getElementById('admBody'); const s = "w-full p-4 bg-slate-50 border rounded-xl mb-3 font-bold";
             if(t === 'ch') {
                 editingCHId = null;
