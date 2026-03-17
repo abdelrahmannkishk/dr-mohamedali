@@ -120,8 +120,16 @@
             </div>
         </div>
 
-        <div id="ranksSec" class="sec space-y-8">
-            <div id="ranksList" class="space-y-12 max-w-3xl mx-auto"></div>
+        <div id="ranksSec" class="sec flex flex-col gap-10">
+            <div class="max-w-4xl mx-auto w-full space-y-12">
+                <section>
+                    <h3 class="text-3xl font-black mb-6 flex items-center gap-3"><i class="fas fa-crown text-yellow-400"></i> صدارة الامتحانات</h3>
+                    <select id="userLecRankSelect" onchange="renderFilteredRanks(this.value)" class="w-full p-4 bg-white border-2 rounded-[25px] mb-6 font-bold shadow-sm outline-none focus:ring-4 focus:ring-red-100 transition-all border-slate-100">
+                        <option value="">اختر الامتحان لعرض الأوائل</option>
+                    </select>
+                    <div id="ranksList" class="space-y-4"></div>
+                </section>
+            </div>
         </div>
 
         <div id="forumSec" class="sec space-y-4">
@@ -193,19 +201,23 @@
                 const snap = await window.get(window.ref(window.db, 'academy/students/'+ph)); 
                 if(snap.exists() && snap.val().pass === ps) { 
                     const u = snap.val();
-                    if(u.locked) return alert("هذا الحساب محظور! تواصل مع الدعم.");
+                    if(u.locked) return alertK("تنبيه", "هذا الحساب محظور! تواصل مع الدعم.");
                     const sK = Math.random().toString(36).substr(2, 9);
                     u.sessionKey = sK;
                     await window.update(window.ref(window.db, 'academy/students/'+ph), { sessionKey: sK });
                     localStorage.setItem('king_sessionKey', sK);
                     user = u; localStorage.setItem('golden_user', JSON.stringify(user)); location.reload(); 
-                } else alert("خطأ!"); 
+                } else alertK("خطأ", "رقم الموبايل أو كلمة المرور غير صحيحة!"); 
             }
         }
         async function handleRegister() {
             const ph = document.getElementById('rPh').value.trim();
             const u = { name: document.getElementById('rN').value, phone: ph, pass: document.getElementById('rPs').value, level: document.getElementById('rLv').value, balance: 0, role: 'student' };
-            await window.set(window.ref(window.db, 'academy/students/'+ph), u); alert("تم!"); toggleAuth('login');
+            if (!u.name || !u.phone || !u.pass || !u.level) {
+                alertK("خطأ", "يجب ملء جميع الحقول!");
+                return;
+            }
+            await window.set(window.ref(window.db, 'academy/students/'+ph), u); alertK("نجاح", "تم إنشاء الحساب! يمكنك الدخول الآن."); toggleAuth('login');
         }
 
         function getCached(key) { try { const data = localStorage.getItem('king_' + key); return data ? JSON.parse(data) : null; } catch(e) { return null; } }
@@ -236,29 +248,30 @@
                 
                 // Specific Listener: Lectures
                 window.onValue(window.ref(window.db, 'academy/lectures'), snap => {
-                    if(snap.exists()) { dbData.lectures = snap.val(); setCached('lectures', dbData.lectures); renderCourses(); window.admRefresh(); }
+                    dbData.lectures = snap.exists() ? snap.val() : {};
+                    setCached('lectures', dbData.lectures); renderCourses(); window.admRefresh();
                 });
 
                 // Specific Listener: Questions
                 window.onValue(window.ref(window.db, 'academy/questions'), snap => {
-                    if(snap.exists()) { dbData.questions = snap.val(); setCached('questions', dbData.questions); window.admRefresh(); }
+                    dbData.questions = snap.exists() ? snap.val() : {};
+                    setCached('questions', dbData.questions); window.admRefresh();
                 });
 
                 // Specific Listener: Chats (Forum)
                 window.onValue(window.ref(window.db, 'academy/chats'), snap => {
-                    if(snap.exists()) { 
-                        const newChats = snap.val();
-                        const isNew = Object.keys(newChats).length !== Object.keys(dbData.chats).length;
-                        dbData.chats = newChats; 
-                        setCached('chats', dbData.chats); 
-                        if(isNew || document.getElementById('chatBox').innerHTML === '') renderForum(); 
-                        window.admRefresh();
-                    }
+                    const newChats = snap.exists() ? snap.val() : {};
+                    const isNew = Object.keys(newChats).length !== (dbData.chats ? Object.keys(dbData.chats).length : 0);
+                    dbData.chats = newChats; 
+                    setCached('chats', dbData.chats); 
+                    if(isNew || document.getElementById('chatBox').innerHTML === '') renderForum(); 
+                    window.admRefresh();
                 });
 
                 // Specific Listener: Quiz Results (Ranks)
                 window.onValue(window.ref(window.db, 'academy/quizResults'), snap => {
-                    if(snap.exists()) { dbData.quizResults = snap.val(); setCached('quizResults', dbData.quizResults); renderRanks(); window.admRefresh(); }
+                    dbData.quizResults = snap.exists() ? snap.val() : {};
+                    setCached('quizResults', dbData.quizResults); renderRanks(); window.admRefresh();
                 });
 
                 // Specific Listener: Current User (Wallet & access)
@@ -266,10 +279,10 @@
                     window.onValue(window.ref(window.db, 'academy/students/' + user.phone), snap => {
                         if(snap.exists()) {
                             const newUserData = snap.val();
-                            if(newUserData.locked) { alert("تم حظر حسابك!"); logout(); return; }
+                            if(newUserData.locked) { alertK("تنبيه", "تم حظر حسابك!"); logout(); return; }
                             const localSK = localStorage.getItem('king_sessionKey');
-                            if(newUserData.sessionKey && localSK && newUserData.sessionKey !== localSK) { alert("تم تسجيل الدخول من جهاز آخر!"); logout(); return; }
-                            // Only update specific fields to prevent overriding ongoing local interactions unnecessarily
+                            if(newUserData.sessionKey && localSK && newUserData.sessionKey !== localSK) { alertK("تنبيه", "تم تسجيل الدخول من جهاز آخر!"); logout(); return; }
+                            // Only update specific fields to prevent overriding local interactions unnecessarily
                             user.balance = newUserData.balance;
                             user.courses = newUserData.courses || {};
                             localStorage.setItem('golden_user', JSON.stringify(user));
@@ -311,7 +324,7 @@
         }
 
         window.openChapter = (id) => {
-            if(user.role !== 'admin' && !(user.courses && user.courses[id])) return alert("اشترك أولاً!");
+            if(user.role !== 'admin' && !(user.courses && user.courses[id])) return alertK("تنبيه", "اشترك أولاً في الكورس!");
             const lecs = Object.values(dbData.lectures || {}).filter(l => l.chId === id).sort((a,b) => a.id.localeCompare(b.id));
             let results = dbData.quizResults ? Object.values(dbData.quizResults).filter(r => r.phone === user.phone) : [];
             document.getElementById('lessonsList').innerHTML = lecs.map((l, idx) => {
@@ -350,43 +363,113 @@
             window.scrollTo(0,0);
         };
 
-        window.startQuiz = (id) => {
+        window.startQuiz = async (id) => {
             const qs = Object.values(dbData.questions || {}).filter(q => q.lecId === id);
-            const firstQ = qs[0];
-            const hasTaken = Object.values(dbData.quizResults || {}).find(r => r.phone === user.phone && r.lecId === id);
+            if(qs.length === 0) return alertK("تنبيه", "لا توجد أسئلة لهذا الدرس.");
             
-            if(firstQ?.oneTime && hasTaken && user.role !== 'admin') {
-                alert(`هذا الامتحان مسموح به مرة واحدة فقط. نتيجتك السابقة: ${hasTaken.score}%`);
-                return;
+            // Check for one-time restriction (any question in lecture can flag it)
+            const isOneTime = qs.some(q => q.oneTime);
+            if(isOneTime && user.role !== 'admin') {
+                // Server-side check to prevent client-side cache bypass
+                const snap = await window.get(window.ref(window.db, 'academy/quizResults'));
+                const hasTaken = snap.exists() ? Object.values(snap.val()).find(r => r.phone === user.phone && r.lecId === id) : null;
+                if(hasTaken) {
+                    window.alertK("تنبيه", `هذا الامتحان مسموح به مرة واحدة فقط. نتيجتك السابقة: ${hasTaken.score}%`);
+                    return;
+                }
             }
 
             const container = document.getElementById('quizContainer'); container.classList.remove('hidden');
-            container.innerHTML = `<h3 class="text-2xl font-black mb-6">امتحان الدرس</h3>` + qs.map((q, i) => `<div class="mb-8 p-6 bg-slate-50 rounded-2xl"><p class="font-black text-xl mb-4">${i+1}. ${q.text}</p><div class="grid gap-3">${[q.a, q.b, q.c, q.d].map((opt, idx) => `<button onclick="ansQuiz(this, '${q.id}', ${idx})" class="w-full p-4 bg-white border-2 rounded-xl font-bold text-right">${opt}</button>`).join('')}</div></div>`).join('') + `<button onclick="submitQuiz('${id}')" class="w-full btn-main py-4 text-xl">عرض النتيجة</button>`;
+            container.innerHTML = `<h3 class="text-2xl font-black mb-6">امتحان الدرس</h3>` + qs.map((q, i) => `<div class="mb-8 p-6 bg-slate-50 rounded-2xl"><p class="font-black text-xl mb-4">${i+1}. ${q.text}</p><div class="grid gap-3">${[q.a, q.b, q.c, q.d].map((opt, idx) => `<button onclick="ansQuiz(this, '${q.id}', ${idx})" class="w-full p-4 bg-white border-2 rounded-xl font-bold text-right">${opt}</button>`).join('')}</div></div>`).join('') + `<button id="quizSubBtn" onclick="submitQuiz('${id}')" class="w-full btn-main py-4 text-xl">عرض النتيجة</button>`;
 
-            if(firstQ?.timer > 0) {
-                let time = firstQ.timer * 60;
+            // Timer logic: Use the maximum timer set across all questions in this lecture
+            const maxTimer = Math.max(...qs.map(q => q.timer || 0));
+            if(maxTimer > 0) {
+                let time = maxTimer * 60;
                 const timerEl = document.getElementById('quizTimer');
                 timerEl.classList.remove('hidden');
                 clearInterval(quizInt);
                 quizInt = setInterval(() => {
                     let m = Math.floor(time/60); let s = time%60;
                     timerEl.innerText = `${m}:${s < 10 ? '0'+s : s}`;
-                    if(time <= 0) { clearInterval(quizInt); submitQuiz(id); alert("انتهى الوقت!"); }
+                    if(time <= 0) { clearInterval(quizInt); submitQuiz(id); window.alertK("انتهى الوقت!", "سيتم إرسال إجاباتك الآن."); }
                     time--;
                 }, 1000);
             }
         };
 
-        window.ansQuiz = (b, qId, idx) => { b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('bg-red-600', 'text-white')); b.classList.add('bg-red-600', 'text-white'); if(!window.curA) window.curA = {}; window.curA[qId] = idx; };
+                window.ansQuiz = (b, qId, idx) => { 
+            b.parentElement.querySelectorAll('button').forEach(x => {
+                x.classList.remove('bg-red-600', 'text-white');
+                x.classList.add('bg-white');
+            }); 
+            b.classList.remove('bg-white');
+            b.classList.add('bg-red-600', 'text-white'); 
+            if(!window.curA) window.curA = {}; window.curA[qId] = idx; 
+        };
         
+        let quizBusy = false;
         window.submitQuiz = async (id) => {
+            if(quizBusy) return;
+            quizBusy = true;
             clearInterval(quizInt);
             const qs = Object.values(dbData.questions || {}).filter(q => q.lecId === id);
-            let s = 0; qs.forEach(q => { if(window.curA?.[q.id] == q.correct) s++; });
+            const allAnswered = Object.keys(window.curA || {}).length === qs.length;
+            if(qs.length === 0) {
+                alertK("تنبيه", "لا توجد أسئلة لهذا الاختبار.");
+                document.getElementById('quizContainer').classList.add('hidden');
+                quizBusy = false;
+                return;
+            }
+            let s = 0; 
+            const review = qs.map(q => {
+                const userAns = window.curA?.[q.id];
+                const isCorrect = userAns == q.correct;
+                if(isCorrect) s++;
+                return { ...q, userAns, isCorrect };
+            });
+
+            const subBtn = document.getElementById('quizSubBtn');
+            if(subBtn) { subBtn.disabled = true; subBtn.innerText = "جاري الحفظ... ⏳"; }
+
             const f = Math.round((s/qs.length)*100);
             await window.push(window.ref(window.db, 'academy/quizResults'), { student: user.name, phone: user.phone, lecId: id, lecTitle: dbData.lectures[id]?.title || 'امتحان مستقل', score: f, time: Date.now() });
-            document.getElementById('scoreValue').innerText = f + "%"; document.getElementById('scoreModal').style.display = "flex"; document.getElementById('quizContainer').classList.add('hidden');
+            
+            document.getElementById('scoreValue').innerText = f + "%"; 
+            document.getElementById('scoreModal').style.display = "flex"; 
+            quizBusy = false;            
+            const container = document.getElementById('quizContainer');
+            container.innerHTML = `
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-2xl font-black">مراجعة الامتحان - النتيجة: ${f}%</h3>
+                    <button onclick="document.getElementById('quizContainer').classList.add('hidden'); window.scrollTo(0, document.getElementById('lessonsSec').offsetTop);" class="text-slate-400 font-bold hover:text-red-600 transition-colors">إغلاق المراجعة</button>
+                </div>
+                <div class="space-y-6">
+                    ${review.map((q, i) => `
+                        <div class="p-6 rounded-3xl border-2 ${q.isCorrect ? 'border-green-100 bg-green-50/50' : 'border-red-100 bg-red-50/50'}">
+                            <p class="font-black text-xl mb-4">${i+1}. ${q.text || 'السؤال محذوف النص'}</p>
+                            <div class="grid gap-3">
+                                ${[q.a, q.b, q.c, q.d].map((opt, idx) => {
+                                    let cls = "bg-white border-2 text-slate-400";
+                                    let isSelected = (idx == q.userAns);
+                                    let isRightChoice = (idx == q.correct);
+                                    
+                                    if(isRightChoice && isSelected) cls = "bg-green-600 text-white border-green-600 shadow-lg scale-[1.02] ring-4 ring-green-300";
+                                    else if(isRightChoice && !isSelected && allAnswered) cls = "bg-green-100 text-green-800 border-green-500 shadow-sm";
+                                    else if(!isRightChoice && isSelected) cls = "bg-red-600 text-white border-red-600 shadow-lg ring-4 ring-red-300";
+                                    
+                                    return `<div class="w-full p-4 rounded-xl font-bold text-right transition-all flex justify-between items-center ${cls}">
+                                        <span>${opt || 'خيار فارغ'}</span>
+                                        <span class="text-xl">${isRightChoice && isSelected ? '✅ إجابتك (صحيحة)' : (isRightChoice && allAnswered ? '✅ الإجابة الصحيحة' : (isSelected ? '❌ إجابتك (خاطئة)' : ''))}</span>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </div>`).join('')}
+                </div>
+                <button onclick="document.getElementById('quizContainer').classList.add('hidden'); window.scrollTo(0, document.getElementById('lessonsSec').offsetTop);" class="w-full btn-main py-5 text-xl mt-10">العودة للمحاضرات</button>`;
+            
             window.curA = {};
+            document.getElementById('quizTimer').classList.add('hidden');
         };
 
         window.admRefresh = () => { if(currentAdmTab) admTab(currentAdmTab); };
@@ -411,6 +494,17 @@
                 editingQId = null;
                 b.innerHTML = `<h3 class="text-2xl font-black mb-6">إدارة الأسئلة وخصائص الامتحان</h3>
                 <div class="bg-slate-100 p-6 rounded-3xl mb-10">
+                    <h4 class="font-black mb-4">تطبيق خصائص على كل أسئلة الدرس</h4>
+                    <select id="qSettingsLec" class="${s}"><option value="none">امتحان مستقل</option>${Object.values(dbData.lectures||{}).map(l=>`<option value="${l.id}">${l.title}</option>`).join('')}</select>
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div><label class="text-xs font-black">وقت الامتحان (بالدقائق)</label><input id="qTimeSet" type="number" value="30" class="${s}"></div>
+                        <div><label class="text-xs font-black">عدد المحاولات</label><select id="qOnceSet" class="${s}"><option value="0">غير محدود</option><option value="1">مرة واحدة فقط</option></select></div>
+                    </div>
+                    <button onclick="svQSettings()" class="w-full bg-slate-900 text-white font-black py-4 rounded-xl hover:bg-red-600 transition-colors">تطبيق الخصائص وتحديثها</button>
+                </div>
+                
+                <h4 class="font-black mb-4">إضافة سؤال جديد</h4>
+                <div class="bg-white p-6 border-2 rounded-3xl mb-10 shadow-sm">
                     <select id="qLec" class="${s}"><option value="none">امتحان مستقل</option>${Object.values(dbData.lectures||{}).map(l=>`<option value="${l.id}">${l.title}</option>`).join('')}</select>
                     <div class="grid grid-cols-2 gap-3 mb-4">
                         <div><label class="text-xs font-black">وقت الامتحان (بالدقائق)</label><input id="qTime" type="number" value="30" class="${s}"></div>
@@ -419,9 +513,9 @@
                     <input id="qT" placeholder="نص السؤال" class="${s}">
                     <div class="grid grid-cols-2 gap-2"><input id="qa" placeholder="خيار 1" class="${s}"><input id="qb" placeholder="خيار 2" class="${s}"><input id="qc" placeholder="خيار 3" class="${s}"><input id="qd" placeholder="خيار 4" class="${s}"></div>
                     <select id="qC" class="${s}"><option value="0">خيار 1 صح</option><option value="1">خيار 2 صح</option><option value="2">خيار 3 صح</option><option value="3">خيار 4 صح</option></select>
-                    <button id="qBtn" onclick="svQu()" class="w-full btn-main py-4 italic uppercase">Save Question & Settings</button>
+                    <button id="qBtn" onclick="svQu()" class="w-full btn-main py-4 italic uppercase">حفظ السؤال</button>
                 </div>
-                <div class="space-y-3">${Object.values(dbData.questions||{}).map(q => `<div class="p-4 border rounded-2xl flex justify-between bg-white shadow-sm font-bold"><span>${q.text}</span><div class="flex gap-2"><button onclick="editQ('${q.id}')" class="text-blue-600">تعديل</button><button onclick="delItem('questions','${q.id}')" class="text-red-600">حذف</button></div></div>`).join('')}</div>`;
+                <div class="space-y-3">${Object.values(dbData.questions||{}).map(q => `<div class="p-4 border rounded-2xl flex justify-between bg-white shadow-sm font-bold"><span>${q.text || 'سؤال بدون نص'}</span><div class="flex gap-2"><button onclick="editQ('${q.id}')" class="text-blue-600">تعديل</button><button onclick="delItem('questions','${q.id}')" class="text-red-600">حذف</button></div></div>`).join('')}</div>`;
             }
             if(t === 'qs') {
                 b.innerHTML = `<h3 class="text-2xl font-black mb-6">الأوائل</h3><select onchange="showLecRanks(this.value)" class="${s}"><option>اختر الامتحان</option>${Object.values(dbData.lectures||{}).map(l=>`<option value="${l.id}">${l.title}</option>`).join('')}</select><div id="lecRanksBox" class="space-y-2 mt-4"></div>`;
@@ -430,7 +524,7 @@
             if(t === 'co') { b.innerHTML = `<input id="camt" placeholder="القيمة" class="${s}"><input id="ccnt" placeholder="العدد" class="${s}"><button onclick="genTurbo()" class="w-full btn-main py-4">توليد</button><div id="pFill"></div>`; }
         };
 
-        window.addBalMan = async (ph) => { const val = parseInt(document.getElementById('bal_'+ph).value); if(!val) return; const currentBal = dbData.students[ph].balance || 0; await window.update(window.ref(window.db, 'academy/students/'+ph), { balance: currentBal + val }); alert("تم الشحن! 💰"); admTab('st'); };
+        window.addBalMan = async (ph) => { const val = parseInt(document.getElementById('bal_'+ph).value); if(!val) return; const currentBal = dbData.students[ph].balance || 0; await window.update(window.ref(window.db, 'academy/students/'+ph), { balance: currentBal + val }); alertK("نجاح", "تم الشحن! 💰"); admTab('st'); };
         
         window.editCh = (id) => {
             editingCHId = id;
@@ -453,21 +547,65 @@
 
         window.editQ = (id) => { editingQId = id; const q = dbData.questions[id]; document.getElementById('qLec').value = q.lecId; document.getElementById('qT').value = q.text; document.getElementById('qa').value = q.a; document.getElementById('qb').value = q.b; document.getElementById('qc').value = q.c; document.getElementById('qd').value = q.d; document.getElementById('qC').value = q.correct; document.getElementById('qTime').value = q.timer || 30; document.getElementById('qOnce').value = q.oneTime ? 1 : 0; document.getElementById('qBtn').innerText = "تحديث ✅"; };
         
-        window.svQu = async () => { 
-            const id = editingQId || "Q"+Date.now(); 
-            const timer = parseInt(document.getElementById('qTime').value);
-            const once = parseInt(document.getElementById('qOnce').value) === 1;
-            const lecId = document.getElementById('qLec').value;
+        window.svQSettings = async () => {
+            const lecId = document.getElementById('qSettingsLec').value;
+            const timer = parseInt(document.getElementById('qTimeSet').value);
+            const once = parseInt(document.getElementById('qOnceSet').value) === 1;
             const allQs = Object.values(dbData.questions || {}).filter(q => q.lecId === lecId);
             const updates = {};
-            allQs.forEach(q => { updates[`academy/questions/${q.id}/timer`] = timer; updates[`academy/questions/${q.id}/oneTime`] = once; });
+            allQs.forEach(q => { updates[`academy/questions/${q.id}/timer`] = timer || 0; updates[`academy/questions/${q.id}/oneTime`] = once; });
             await window.update(window.ref(window.db), updates);
-            await window.set(window.ref(window.db, 'academy/questions/'+id), { id, lecId, text: document.getElementById('qT').value, a: document.getElementById('qa').value, b: document.getElementById('qb').value, c: document.getElementById('qc').value, d: document.getElementById('qd').value, correct: document.getElementById('qC').value, timer, oneTime: once }); 
-            alert("تم الحفظ وتحديث إعدادات الامتحان! ✅"); admTab('qu'); 
+            alertK("نجاح", "تم تطبيق خصائص الامتحان بنجاح! ✅");
         };
 
-        window.showLecRanks = (id) => { const res = Object.values(dbData.quizResults || {}).filter(r => r.lecId === id).sort((a,b) => b.score - a.score); document.getElementById('lecRanksBox').innerHTML = res.map((r, i) => `<div class="p-4 bg-slate-50 rounded-xl flex justify-between font-bold"><span>${i+1}. ${r.student}</span><span class="text-red-600">${r.score}%</span></div>`).join(''); };
-        window.delItem = async (p, id) => { if(await confirmK("تأكيد الحذف؟", "هذا الإجراء لا يمكن التراجع عنه.")) { await window.remove(window.ref(window.db, `academy/${p}/${id}`)); alert("تم!"); location.reload(); } };
+        window.svQu = async () => { 
+            const id = editingQId || "Q"+Date.now(); 
+            const text = document.getElementById('qT').value.trim();
+            const a = document.getElementById('qa').value.trim();
+            const b = document.getElementById('qb').value.trim();
+            const c = document.getElementById('qc').value.trim();
+            const d = document.getElementById('qd').value.trim();
+            const correct = document.getElementById('qC').value;
+            const lecId = document.getElementById('qLec').value;
+
+            if(!text || !a || !b) return alertK("خطأ", "يجب ملء بيانات السؤال (النص والاختيارات على الأقل)");
+
+            const timer = parseInt(document.getElementById('qTime').value) || 0;
+            const once = parseInt(document.getElementById('qOnce').value) === 1;
+
+            await window.set(window.ref(window.db, 'academy/questions/'+id), { 
+                id, lecId, text, a, b, c, d, correct, timer, oneTime: once 
+            }); 
+            alertK("نجاح", "تم حفظ السؤال بنجاح! ✅"); admTab('qu'); 
+        };
+
+                window.normalizeArabic = (str) => (str || "").trim()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ى/g, 'ي')
+            .replace(/ة/g, 'ه');
+
+        window.showLecRanks = (id) => { 
+            const results = Object.values(dbData.quizResults || {}).filter(r => r.lecId === id).sort((a,b) => b.time - a.time);
+            const grouped = results.reduce((acc, r) => {
+                const key = window.normalizeArabic(r.student);
+                if(!key) return acc;
+                if(!acc[key]) acc[key] = { name: r.student, history: [] };
+                acc[key].history.push(r.score);
+                return acc;
+            }, {});
+            const sorted = Object.values(grouped).sort((a,b) => Math.max(...b.history) - Math.max(...a.history));
+            document.getElementById('lecRanksBox').innerHTML = sorted.map((g, i) => `
+                <div class="p-4 bg-slate-50 rounded-xl mb-2 flex flex-col gap-2 shadow-sm">
+                    <div class="flex justify-between items-center font-black">
+                        <span class="text-sm">${i+1}. ${g.name}</span>
+                        <span class="text-[10px] text-slate-400">محاولات: ${g.history.length}</span>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        ${g.history.map(s => `<span class="px-3 py-1 bg-white border rounded-lg text-xs font-black ${s >= 50 ? 'text-green-600' : 'text-red-600'}">${s}%</span>`).join('')}
+                    </div>
+                </div>`).join(''); 
+        };
+                window.delItem = async (p, id) => { if(await confirmK("تأكيد الحذف؟", "هذا الإجراء لا يمكن التراجع عنه.")) { await window.remove(window.ref(window.db, `academy/${p}/${id}`)); await alertK("نجاح", "تم الحذف بنجاح!"); window.admRefresh(); } };
         window.upImg = (i) => { const r = new FileReader(); r.onload = (e) => tempImg = e.target.result; r.readAsDataURL(i.files[0]); };
         
         window.confirmK = (t, m) => {
@@ -475,8 +613,18 @@
                 const d = document.getElementById('customModal'); d.style.display = 'flex';
                 document.getElementById('modalTitle').innerText = t; document.getElementById('modalMsg').innerText = m;
                 document.getElementById('modalInput').classList.add('hidden');
+                document.getElementById('modalNo').classList.remove('hidden');
                 document.getElementById('modalNo').onclick = () => { d.style.display = 'none'; res(false); };
                 document.getElementById('modalYes').onclick = () => { d.style.display = 'none'; res(true); };
+            });
+        };
+        window.alertK = (t, m) => {
+            return new Promise(res => {
+                const d = document.getElementById('customModal'); d.style.display = 'flex';
+                document.getElementById('modalTitle').innerText = t; document.getElementById('modalMsg').innerText = m;
+                document.getElementById('modalInput').classList.add('hidden');
+                document.getElementById('modalNo').classList.add('hidden');
+                document.getElementById('modalYes').onclick = () => { d.style.display = 'none'; res(); };
             });
         };
         window.promptK = (t, m) => {
@@ -484,6 +632,7 @@
                 const d = document.getElementById('customModal'); d.style.display = 'flex';
                 document.getElementById('modalTitle').innerText = t; document.getElementById('modalMsg').innerText = m;
                 const inp = document.getElementById('modalInput'); inp.classList.remove('hidden'); inp.value = ""; inp.focus();
+                document.getElementById('modalNo').classList.remove('hidden');
                 document.getElementById('modalNo').onclick = () => { d.style.display = 'none'; res(null); };
                 document.getElementById('modalYes').onclick = () => { d.style.display = 'none'; res(inp.value); };
             });
@@ -495,7 +644,7 @@
             if(!amt || isNaN(amt)) return;
             const id = "REQ"+Date.now();
             await window.set(window.ref(window.db, 'academy/rechargeRequests/'+id), { id, phone: user.phone, name: user.name, amount: parseInt(amt), time: Date.now(), status: 'pending' });
-            alert("تم إرسال طلبك! سيتم المراجعة والتحويل فوراً. ✅");
+            alertK("نجاح", "تم إرسال طلبك! سيتم المراجعة والتحويل فوراً. ✅");
         };
         window.accReq = async (id, ph, amt) => {
             if(!await confirmK("قبول الطلب؟", "سيتم إضافة المبلغ لرصيد الطالب.")) return;
@@ -505,7 +654,7 @@
             updates[`academy/students/${ph}/balance`] = curBal + amt;
             updates[`academy/rechargeRequests/${id}`] = null;
             await window.update(window.ref(window.db), updates);
-            alert("تم القبول والشحن! ✅");
+            alertK("اتمام الشحن", "تم القبول والشحن! ✅");
         };
         window.rejReq = async (id) => { if(await confirmK("رفض الطلب؟", "هل تريد حذف هذا الطلب؟")) await window.remove(window.ref(window.db, 'academy/rechargeRequests/'+id)); };
         
@@ -517,10 +666,10 @@
             
             if(editingCHId) {
                 await window.update(window.ref(window.db, 'academy/chapters/'+id), { title, price, level, img: tempImg });
-                alert("تم تحديث الكورس بنجاح! ✅");
+                alertK("نجاح", "تم تحديث الكورس بنجاح! ✅");
             } else {
                 await window.set(window.ref(window.db, 'academy/chapters/'+id), { id, title, price, level, img: tempImg });
-                alert("تم رفع الكورس بنجاح! 🚀");
+                alertK("نجاح", "تم رفع الكورس بنجاح! 🚀");
             }
             admTab('ch'); 
         };
@@ -532,32 +681,33 @@
             const url = document.getElementById('lu').value;
             if(editingLTId) {
                 await window.update(window.ref(window.db, 'academy/lectures/'+id), { chId, title, url });
-                alert("تم تحديث المحاضرة بنجاح! ✅");
+                alertK("نجاح", "تم تحديث المحاضرة بنجاح! ✅");
             } else {
                 await window.set(window.ref(window.db, 'academy/lectures/'+id), { id, chId, title, url });
-                alert("تم رفع المحاضرة بنجاح! 🚀");
+                alertK("نجاح", "تم رفع المحاضرة بنجاح! 🚀");
             }
             admTab('le'); 
         };
-        window.genTurbo = async () => { const amt = document.getElementById('camt').value; const total = parseInt(document.getElementById('ccnt').value); let c = 0; const batch = async () => { const ups = {}; for(let i=0; i<200 && c<total; i++) { const code = "KING-"+Math.random().toString(36).substr(2,6).toUpperCase(); ups[`academy/codes/${code}`] = { code, amount: amt, used: false }; c++; } await window.update(window.ref(window.db), ups); if(c < total) setTimeout(batch, 5); else alert("تم!"); }; batch(); };
+        window.genTurbo = async () => { const amt = document.getElementById('camt').value; const total = parseInt(document.getElementById('ccnt').value); let c = 0; const batch = async () => { const ups = {}; for(let i=0; i<200 && c<total; i++) { const code = "KING-"+Math.random().toString(36).substr(2,6).toUpperCase(); ups[`academy/codes/${code}`] = { code, amount: amt, used: false }; c++; } await window.update(window.ref(window.db), ups); if(c < total) setTimeout(batch, 5); else alertK("نجاح", "تم توليد الأكواد بنجاح! 👑"); }; batch(); };
         window.showSection = (id) => { document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active')); document.getElementById(id+'Sec').classList.add('active'); };
         window.openAdmin = () => document.getElementById('adminPanel').classList.remove('hidden');
         window.closeAdmin = () => document.getElementById('adminPanel').classList.add('hidden');
         window.logout = () => { localStorage.clear(); location.reload(); };
-        window.useCode = async () => { const c = document.getElementById('cInp').value.trim().toUpperCase(); if(!c) return; const snap = await window.get(window.ref(window.db, 'academy/codes/'+c)); if(snap.exists() && !snap.val().used) { const amt = parseInt(snap.val().amount); await window.update(window.ref(window.db, 'academy/students/'+user.phone), { balance: (user.balance || 0) + amt }); await window.update(window.ref(window.db, 'academy/codes/'+c), { used: true }); alert("تم الشحن!"); } else alert("خطأ!"); };
+        window.useCode = async () => { const c = document.getElementById('cInp').value.trim().toUpperCase(); if(!c) return; const snap = await window.get(window.ref(window.db, 'academy/codes/'+c)); if(snap.exists() && !snap.val().used) { const amt = parseInt(snap.val().amount); await window.update(window.ref(window.db, 'academy/students/'+user.phone), { balance: (user.balance || 0) + amt }); await window.update(window.ref(window.db, 'academy/codes/'+c), { used: true }); alertK("نجاح", "تم الشحن!"); } else alertK("خطأ", "الكود غير صحيح!"); };
         window.buyCourse = async (id, pr) => { 
             // 1. Fetch fresh balance to prevent stale client data from allowing purchase
             const snap = await window.get(window.ref(window.db, `academy/students/${user.phone}/balance`));
             const realBalance = snap.exists() ? snap.val() : (user.balance || 0);
 
             if(realBalance >= pr) { 
-                if(confirm("شراء؟")) { 
+                if(await confirmK("تأكيد الشراء", "هل تريد شراء هذا الكورس؟")) { 
                     const u = {}; 
                     u[`academy/students/${user.phone}/balance`] = realBalance - pr; 
                     u[`academy/students/${user.phone}/courses/${id}`] = true; 
                     await window.update(window.ref(window.db), u); 
+                    window.alertK("مبروك!", "تم شراء الكورس بنجاح!");
                 } 
-            } else alert("رصيد ناقص!"); 
+            } else window.alertK("عفواً", "رصيدك غير كافٍ لشراء هذا الكورس."); 
         };
         window.sendMsg = async () => { const i = document.getElementById('msgInp'); if(!i.value) return; await window.push(window.ref(window.db, 'academy/chats'), { name: user.name, phone: user.phone, text: i.value, level: user.level, time: Date.now() }); i.value = ""; };
         function renderForum() { 
@@ -568,17 +718,59 @@
             if(isAtBottom) b.scrollTop = b.scrollHeight; // Only auto-scroll if already at bottom to prevent hijacking
         }
         function renderRanks() {
-            const list = document.getElementById('ranksList'); if(!dbData.quizResults) return;
-            const grouped = Object.values(dbData.quizResults).reduce((acc, res) => { 
-                if(!acc[res.lecId]) acc[res.lecId] = { title: res.lecTitle || (dbData.lectures && dbData.lectures[res.lecId] ? dbData.lectures[res.lecId].title : 'امتحان'), students: [] }; 
-                acc[res.lecId].students.push(res); 
-                return acc; 
-            }, {});
-            list.innerHTML = Object.values(grouped).map(lec => {
-                const top10 = lec.students.sort((a,b) => b.score - a.score).slice(0, 10);
-                return `<div class="royal-card overflow-hidden mb-6"><div class="bg-slate-900 p-4 text-white font-black">${lec.title}</div><div class="p-4">${top10.map((s, i) => `<div class="flex justify-between p-2 border-b"><span>${i+1}. ${s.student}</span><span class="text-red-600">${s.score}%</span></div>`).join('')}</div></div>`;
-            }).join('');
+            const list = document.getElementById('ranksList'); 
+            const select = document.getElementById('userLecRankSelect');
+            if(!dbData.quizResults) return;
+            
+            // Populate Dropdown if empty
+            const lecs = Object.values(dbData.lectures || {}).filter(l => Object.values(dbData.quizResults).some(r => r.lecId === l.id));
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">اختر الامتحان لعرض الأوائل</option>' + lecs.map(l => `<option value="${l.id}" ${l.id === currentVal ? 'selected' : ''}>${l.title}</option>`).join('');
+
+            if(select.value) renderFilteredRanks(select.value);
+            else list.innerHTML = `<div class="p-16 text-center opacity-30 font-black text-xl border-4 border-dashed rounded-[40px]">☝️ اختر امتحاناً من القائمة أعلاه لعرض لوحة الصدارة</div>`;
         }
+
+        window.renderFilteredRanks = (id) => {
+            if(!id) return;
+            const list = document.getElementById('ranksList');
+            const results = Object.values(dbData.quizResults || {}).filter(r => r.lecId === id).sort((a,b) => a.time - b.time); // Chronological order
+            const grouped = results.reduce((acc, r) => {
+                const key = window.normalizeArabic(r.student);
+                if(!key) return acc;
+                if(!acc[key]) acc[key] = { name: r.student, history: [] };
+                acc[key].history.push(r.score);
+                return acc;
+            }, {});
+            const sorted = Object.values(grouped).sort((a,b) => Math.max(...b.history) - Math.max(...a.history)).slice(0, 10);
+            list.innerHTML = sorted.map((g, i) => {
+                const bestScore = Math.max(...g.history);
+                const rowId = `trials_${i}`;
+                return `
+                <div class="bg-white border-2 rounded-[30px] overflow-hidden border-slate-50 transition-all hover:border-red-100 hover:shadow-xl group">
+                    <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black group-hover:bg-red-600 transition-colors shadow-lg">${i+1}</div>
+                            <div>
+                                <div class="font-black text-xl group-hover:text-red-700 transition-colors">${g.name}</div>
+                                <div class="text-sm text-slate-400 font-bold">أعلى درجة: <span class="text-red-600 font-black text-lg">${bestScore}%</span></div>
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('${rowId}').classList.toggle('hidden'); this.querySelector('i').classList.toggle('fa-chevron-down'); this.querySelector('i').classList.toggle('fa-chevron-up')" class="flex items-center gap-2 px-6 py-2 bg-slate-50 rounded-2xl font-black text-xs hover:bg-slate-100 transition-colors">
+                            <span>التفاصيل (${g.history.length})</span>
+                            <i class="fas fa-chevron-down opacity-40"></i>
+                        </button>
+                    </div>
+                    <div id="${rowId}" class="hidden p-6 bg-slate-50/50 border-t border-dashed flex gap-3 flex-wrap justify-center border-slate-100 animate-fadeIn">
+                        ${g.history.map((s, idx) => `
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="text-[8px] font-black opacity-30 uppercase">م ${idx+1}</span>
+                                <span class="px-3 py-1 bg-white border rounded-lg text-[10px] font-black shadow-sm ${s >= 50 ? 'text-green-600 border-green-100' : 'text-red-600 border-red-100'}">${s}%</span>
+                            </div>`).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+        };
     </script>
 </body>
 </html>
